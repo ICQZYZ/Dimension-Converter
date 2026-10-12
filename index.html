@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>尺寸换算器</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f4f7fb;
+    --card:#ffffff;
+    --muted:#667085;
+    --accent:#1366d6;
+    --accent-2:#0b79d0;
+    --success:#16a34a;
+    --danger:#db2777;
+    --glass: rgba(11,119,208,0.08);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,var(--bg),#eef5ff);font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#0f1724}
+  .app{max-width:1100px;margin:28px auto;padding:20px}
+  header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:20px;box-shadow:0 6px 18px rgba(12,74,177,0.12)}
+  h1{margin:0;font-size:20px}
+  .toolbar{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .btn{background:var(--accent);color:white;padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:600;box-shadow:0 6px 18px rgba(12,74,177,0.08)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(19,102,214,0.12);box-shadow:none}
+  .panel{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:0 8px 30px rgba(20,30,60,0.04)}
+  .section-title{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .section-title h2{margin:0;font-size:16px}
+  .flex{display:flex;gap:12px;align-items:center}
+  .grid{display:grid;gap:12px}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .field{background:linear-gradient(180deg,#fff,#fbfdff);padding:10px;border-radius:10px;border:1px solid rgba(15,23,36,0.04)}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  input[type="number"], input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef8;font-size:14px;outline:none;transition:border-color 0.2s}
+  input[type="number"]:focus, input[type="text"]:focus{border-color:var(--accent)}
+  .unit{font-size:13px;color:var(--muted);margin-left:8px}
+  .small{font-size:13px;color:var(--muted)}
+  .result{font-weight:700;color:#0b1220;margin-top:6px;font-size:15px}
+  .row{display:flex;gap:8px;align-items:center}
+  .muted{color:var(--muted)}
+  .error{color:var(--danger);margin-top:8px;font-size:13px}
+  .preview{margin-top:10px;height:84px;border-radius:8px;background:linear-gradient(90deg,#f8fbff,#ffffff);display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:600;border:1px dashed rgba(15,23,36,0.12)}
+  .ratio-card{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#fbfdff);border:1px solid rgba(15,23,36,0.03)}
+  .ratio-card h3{margin:0;font-size:14px}
+  .px-badge{background:var(--glass);color:var(--accent-2);padding:6px 8px;border-radius:8px;font-weight:600}
+  footer{color:var(--muted);font-size:13px;margin-top:12px;text-align:center}
+
+  @media (max-width:900px){
+    .grid.cols-2{grid-template-columns:1fr}
+    .grid.cols-3{grid-template-columns:1fr}
+    header{flex-wrap:wrap}
+    .toolbar{margin-left:0}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo">尺</div>
+      <div>
+        <h1>尺寸换算器</h1>
+        <div class="muted" style="font-size:13px">实时换算 · 支持 mm/in/ft/m/cm · 对角 → 宽高 · 点间距像素计算</div>
+      </div>
+
+      <div class="toolbar">
+        <button id="exportCsv" class="btn ghost">导出 CSV</button>
+        <button id="exportPdf" class="btn ghost">导出 PDF</button>
+        <button id="toggleLang" class="btn">EN</button>
+      </div>
+    </header>
+
+    <!-- 区域1 -->
+    <section class="panel" id="panel-region1">
+      <div class="section-title"><h2>区域1 — 单位互换</h2><div class="small muted">输入任一项，自动换算其它单位（显示保留 2 位小数）</div></div>
+      <div class="grid cols-3">
+        <div class="field">
+          <label>米 (m)</label>
+          <div class="row"><input id="mInput" type="number" min="0" step="any" placeholder="例如 1.00"><span class="unit">m</span></div>
+          <div class="result" id="m_display">—</div>
+        </div>
+
+        <div class="field">
+          <label>厘米 (cm)</label>
+          <div class="row"><input id="cmInput" type="number" min="0" step="any"><span class="unit">cm</span></div>
+          <div class="result" id="cm_display">—</div>
+        </div>
+
+        <div class="field">
+          <label>毫米 (mm)</label>
+          <div class="row"><input id="mmInput" type="number" min="0" step="any"><span class="unit">mm</span></div>
+          <div class="result" id="mm_display">—</div>
+        </div>
+
+        <div class="field">
+          <label>英寸 (in)</label>
+          <div class="row"><input id="inInput" type="number" min="0" step="any"><span class="unit">in</span></div>
+          <div class="result" id="in_display">—</div>
+        </div>
+
+        <div class="field">
+          <label>英尺 (ft)</label>
+          <div class="row"><input id="ftInput" type="number" min="0" step="any"><span class="unit">ft</span></div>
+          <div class="result" id="ft_display">—</div>
+        </div>
+      </div>
+      <div id="r1Error" class="error" style="display:none"></div>
+    </section>
+
+    <!-- 区域2 -->
+    <section class="panel" id="panel-region2">
+      <div class="section-title"><h2>区域2 — 对角英寸 → 宽 / 高（四种纵横比）</h2>
+        <div class="small muted">输入对角英寸，四个比例同时显示；统一使用单一点间距（默认 1.86 mm）</div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 360px 1fr; gap:14px; align-items:start">
+        <div class="field">
+          <label>对角 (in)</label>
+          <div class="row"><input id="diagInput" type="number" min="0" step="any" placeholder="18.36"><span class="unit">in</span></div>
+          <div style="margin-top:12px">
+            <label>点间距 (mm)</label>
+            <div class="row"><input id="globalDot" type="number" min="0" step="any" value="1.86"><span class="unit">mm</span></div>
+            <div class="small muted" style="margin-top:8px">可手动输入点间距，默认 1.86 mm</div>
+          </div>
+          <div style="margin-top:16px" class="preview" id="diagPreview">屏幕预览</div>
+        </div>
+
+        <div>
+          <div class="grid cols-2">
+            <div class="ratio-card">
+              <h3>A — 16:9</h3>
+              <div class="small muted">宽 × 高</div>
+              <div class="result" id="A_wh_in">—</div>
+              <div class="small" id="A_wh_mm">—</div>
+              <div style="margin-top:8px"><span class="px-badge" id="A_px">—</span></div>
+            </div>
+
+            <div class="ratio-card">
+              <h3>B — 16:10</h3>
+              <div class="small muted">宽 × 高</div>
+              <div class="result" id="B_wh_in">—</div>
+              <div class="small" id="B_wh_mm">—</div>
+              <div style="margin-top:8px"><span class="px-badge" id="B_px">—</span></div>
+            </div>
+
+            <div class="ratio-card">
+              <h3>C — 4:3</h3>
+              <div class="small muted">宽 × 高</div>
+              <div class="result" id="C_wh_in">—</div>
+              <div class="small" id="C_wh_mm">—</div>
+              <div style="margin-top:8px"><span class="px-badge" id="C_px">—</span></div>
+            </div>
+
+            <div class="ratio-card">
+              <h3>D — 5:4</h3>
+              <div class="small muted">宽 × 高</div>
+              <div class="result" id="D_wh_in">—</div>
+              <div class="small" id="D_wh_mm">—</div>
+              <div style="margin-top:8px"><span class="px-badge" id="D_px">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 区域3 -->
+    <section class="panel" id="panel-region3">
+      <div class="section-title"><h2>区域3 — 宽/高 (mm) → 对角英寸 & 像素</h2>
+        <div class="small muted">输入宽和高（mm）并可指定点间距（默认 1.86 mm）。下方会显示英寸值与宽高比。</div>
+      </div>
+
+      <div class="grid cols-3">
+        <div class="field">
+          <label>宽 (mm)</label>
+          <input id="r3_w_mm" type="number" min="0" step="any">
+        </div>
+
+        <div class="field">
+          <label>高 (mm)</label>
+          <input id="r3_h_mm" type="number" min="0" step="any">
+        </div>
+
+        <div class="field">
+          <label>点间距 (mm)</label>
+          <input id="r3_dot" type="number" min="0" step="any" value="1.86">
+          <div class="small muted" style="margin-top:8px">默认 1.86 mm，可手动修改</div>
+        </div>
+
+        <div class="field" style="grid-column: span 3">
+          <label>对角 (in)</label>
+          <div class="result" id="r3_diag">—</div>
+
+          <div style="display:flex;gap:18px;margin-top:10px;flex-wrap:wrap">
+            <div>
+              <div class="small muted">宽（in）</div>
+              <div class="result" id="r3_w_in">—</div>
+            </div>
+            <div>
+              <div class="small muted">高（in）</div>
+              <div class="result" id="r3_h_in">—</div>
+            </div>
+            <div>
+              <div class="small muted">宽高比</div>
+              <div class="result" id="r3_aspect">—</div>
+            </div>
+          </div>
+
+          <div class="small muted" style="margin-top:10px">像素 (X × Y = 总)</div>
+          <div class="result" id="r3_px">—</div>
+        </div>
+      </div>
+
+      <div id="r3Error" class="error" style="display:none"></div>
+    </section>
+
+    <footer>注：显示保留两位小数；小数点使用 '.'；禁止负数；毫米上限 1,000,000。</footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+(() => {
+  const MAX_MM = 1000000;
+  const DEBOUNCE_MS = 200;
+  const SHOW_DECIMALS = 2;
+  const mmPerIn = 25.4;
+
+  const E = id => document.getElementById(id);
+  const toFixed = v => (isFinite(v) ? Number(v).toFixed(SHOW_DECIMALS) : '—');
+  const roundInt = v => (isFinite(v) ? Math.round(v) : '—');
+
+  function gcd(a,b){ if(!b) return a; return gcd(b, a%b); }
+
+  function approxRatio(value, maxDenom = 100) {
+    if (!isFinite(value) || value <= 0) return null;
+    let best = {p:1,q:1,err:Math.abs(value - 1)};
+    for (let q=1;q<=maxDenom;q++){
+      const p = Math.round(value * q);
+      if (p<=0) continue;
+      const err = Math.abs(value - p/q);
+      if (err < best.err) best = {p,q,err};
+    }
+    const g = gcd(best.p, best.q);
+    return {p: best.p/g, q: best.q/g, err: best.err, decimal: best.p/best.q};
+  }
+
+  const KNOWN = [
+    {p:16,q:9, name:'16:9'},
+    {p:16,q:10, name:'16:10'},
+    {p:4,q:3, name:'4:3'},
+    {p:5,q:4, name:'5:4'}
+  ];
+  function matchKnownRatio(value, tol=0.015) {
+    for (const k of KNOWN) {
+      const rv = k.p / k.q;
+      if (Math.abs(rv - value) / rv <= tol) return k.name;
+    }
+    return null;
+  }
+
+  function mmFrom(value, unit){
+    switch(unit){
+      case 'm': return value * 1000;
+      case 'cm': return value * 10;
+      case 'mm': return value;
+      case 'in': return value * mmPerIn;
+      case 'ft': return value * 304.8;
+    }
+    return NaN;
+  }
+  function valueFromMm(mm, unit){
+    switch(unit){
+      case 'm': return mm / 1000;
+      case 'cm': return mm / 10;
+      case 'mm': return mm;
+      case 'in': return mm / mmPerIn;
+      case 'ft': return mm / 304.8;
+    }
+    return NaN;
+  }
+
+  const RATIOS = {A:[16,9], B:[16,10], C:[4,3], D:[5,4]};
+
+  let timer = null;
+  function trigger(source){
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(()=> { timer = null; computeFrom(source); }, DEBOUNCE_MS);
+  }
+
+  // 绑定事件：只在失焦（blur）时统一格式化数字，避免输入过程中跳光标
+  ['mInput','cmInput','mmInput','inInput','ftInput','diagInput','globalDot','r3_w_mm','r3_h_mm','r3_dot'].forEach(id => {
+    const el = E(id);
+    if (!el) return;
+    el.addEventListener('input', ()=> trigger(id));
+    el.addEventListener('blur', ()=> {
+      if (el.value.trim() !== '') {
+        const v = parseFloat(el.value);
+        if (isFinite(v)) el.value = v.toFixed(SHOW_DECIMALS);
+      }
+    });
+  });
+
+  function computeFrom(source){
+    E('r1Error').style.display='none';
+    E('r3Error').style.display='none';
+
+    // 区域1
+    const r1Map = { m:'mInput', cm:'cmInput', mm:'mmInput', in:'inInput', ft:'ftInput' };
+    if (Object.values(r1Map).includes(source)) {
+      const activeUnit = Object.keys(r1Map).find(k => r1Map[k] === source);
+      const activeInput = E(source);
+      const rawText = activeInput.value.trim();
+
+      if (rawText === '') {
+        Object.keys(r1Map).forEach(k => {
+          if (r1Map[k] !== source) E(r1Map[k]).value = '';
+          const disp = E(`${k}_display`);
+          if (disp) disp.textContent = '—';
+        });
+        return;
+      }
+
+      const val = parseFloat(rawText);
+      if (!isFinite(val) || val <= 0) {
+        E('r1Error').textContent = '请输入大于 0 的数值（禁止负数或 0）';
+        E('r1Error').style.display='block';
+        Object.keys(r1Map).forEach(k => {
+          const disp = E(`${k}_display`);
+          if (disp) disp.textContent = '—';
+        });
+        return;
+      }
+
+      const mmVal = mmFrom(val, activeUnit);
+      if (!isFinite(mmVal) || mmVal <= 0) {
+        E('r1Error').textContent = '计算错误';
+        E('r1Error').style.display='block';
+        return;
+      }
+      if (mmVal > MAX_MM) {
+        E('r1Error').textContent = `毫米上限 ${MAX_MM} mm`;
+        E('r1Error').style.display='block';
+        return;
+      }
+
+      // 核心修复点：仅更新非活动输入框与显示区域，绝不覆写当前正在输入的输入框的值
+      Object.keys(r1Map).forEach(k => {
+        const v = valueFromMm(mmVal, k);
+        const inputEl = E(r1Map[k]);
+        if (r1Map[k] !== source) {
+          inputEl.value = toFixed(v);
+        }
+        const disp = E(`${k}_display`);
+        if (disp) disp.textContent = `${toFixed(v)} ${k}`;
+      });
+      return;
+    }
+
+    // 区域2
+    if (source === 'diagInput' || source === 'globalDot') {
+      const diagVal = parseFloat(E('diagInput').value);
+      if (!isFinite(diagVal) || diagVal <= 0) {
+        Object.keys(RATIOS).forEach(k => {
+          E(`${k}_wh_in`).textContent = '—';
+          E(`${k}_wh_mm`).textContent = '—';
+          E(`${k}_px`).textContent = '—';
+        });
+        E('diagPreview').textContent = '屏幕预览';
+        return;
+      }
+      const dot = parseFloat(E('globalDot').value) || 1.86;
+      Object.keys(RATIOS).forEach(k => {
+        const [rw,rh] = RATIOS[k];
+        const scale = Math.sqrt(rw*rw + rh*rh);
+        const w_in = diagVal * (rw/scale);
+        const h_in = diagVal * (rh/scale);
+        const w_mm = w_in * mmPerIn;
+        const h_mm = h_in * mmPerIn;
+        E(`${k}_wh_in`).textContent = `${toFixed(w_in)} in × ${toFixed(h_in)} in`;
+        E(`${k}_wh_mm`).textContent = `${toFixed(w_mm)} mm × ${toFixed(h_mm)} mm`;
+        if (dot > 0) {
+          const pxX = roundInt(w_mm / dot);
+          const pxY = roundInt(h_mm / dot);
+          const total = (isFinite(pxX)&&isFinite(pxY)) ? (pxX*pxY) : '—';
+          E(`${k}_px`).textContent = `${pxX} × ${pxY} = ${total}`;
+        } else {
+          E(`${k}_px`).textContent = '—';
+        }
+      });
+      E('diagPreview').textContent = `${toFixed(diagVal)} in`;
+      return;
+    }
+
+    // 区域3
+    if (['r3_w_mm','r3_h_mm','r3_dot'].includes(source) || source === 'globalDot') {
+      const w_mm = parseFloat(E('r3_w_mm').value);
+      const h_mm = parseFloat(E('r3_h_mm').value);
+      const dotLocal = parseFloat(E('r3_dot').value);
+      const dot = (isFinite(dotLocal) && dotLocal>0) ? dotLocal : (parseFloat(E('globalDot').value) || 1.86);
+
+      if (!isFinite(w_mm) || !isFinite(h_mm) || w_mm <= 0 || h_mm <= 0) {
+        E('r3_diag').textContent = '—';
+        E('r3_w_in').textContent = '—';
+        E('r3_h_in').textContent = '—';
+        E('r3_aspect').textContent = '—';
+        E('r3_px').textContent = '—';
+        if (E('r3_w_mm').value !== '' && E('r3_h_mm').value !== '') {
+          E('r3Error').textContent = '请同时输入宽和高（均需大于 0）';
+          E('r3Error').style.display = 'block';
+        }
+        return;
+      }
+      if (w_mm > MAX_MM || h_mm > MAX_MM) {
+        E('r3Error').textContent = `毫米上限 ${MAX_MM} mm`;
+        E('r3Error').style.display = 'block';
+        return;
+      }
+
+      const w_in = w_mm / mmPerIn;
+      const h_in = h_mm / mmPerIn;
+      const diag_in = Math.sqrt(w_in*w_in + h_in*h_in);
+      E('r3_diag').textContent = `${toFixed(diag_in)} in`;
+      E('r3_w_in').textContent = `${toFixed(w_in)} in`;
+      E('r3_h_in').textContent = `${toFixed(h_in)} in`;
+
+      const ratioDecimal = w_in / h_in;
+      const approx = approxRatio(ratioDecimal, 60);
+      let aspectText = `${ratioDecimal.toFixed(2)} : 1`;
+      if (approx) {
+        const label = matchKnownRatio(ratioDecimal, 0.02);
+        aspectText = `${approx.p}:${approx.q} (${ratioDecimal.toFixed(2)})`;
+        if (label) aspectText += ` ≈ ${label}`;
+      }
+      E('r3_aspect').textContent = aspectText;
+
+      if (dot > 0) {
+        const pxX = roundInt(w_mm / dot);
+        const pxY = roundInt(h_mm / dot);
+        const total = (isFinite(pxX)&&isFinite(pxY)) ? (pxX*pxY) : '—';
+        E('r3_px').textContent = `${pxX} × ${pxY} = ${total}`;
+      } else {
+        E('r3_px').textContent = '—';
+      }
+    }
+  }
+
+  // 导出 CSV
+  E('exportCsv').addEventListener('click', ()=> {
+    const rows = [];
+    const t = new Date().toISOString();
+    rows.push(['timestamp','field','value']);
+    ['mInput','cmInput','mmInput','inInput','ftInput'].forEach(id => rows.push([t,id, E(id).value || '']));
+    rows.push([t,'diagInput', E('diagInput').value || '']);
+    rows.push([t,'globalDot', E('globalDot').value || '']);
+    ['A','B','C','D'].forEach(k => {
+      rows.push([t,`${k}_wh_in`, E(`${k}_wh_in`).textContent || '']);
+      rows.push([t,`${k}_wh_mm`, E(`${k}_wh_mm`).textContent || '']);
+      rows.push([t,`${k}_px`, E(`${k}_px`).textContent || '']);
+    });
+    rows.push([t,'r3_w_mm', E('r3_w_mm').value || '']);
+    rows.push([t,'r3_h_mm', E('r3_h_mm').value || '']);
+    rows.push([t,'r3_dot', E('r3_dot').value || '']);
+    rows.push([t,'r3_diag', E('r3_diag').textContent || '']);
+    rows.push([t,'r3_w_in', E('r3_w_in').textContent || '']);
+    rows.push([t,'r3_h_in', E('r3_h_in').textContent || '']);
+    rows.push([t,'r3_aspect', E('r3_aspect').textContent || '']);
+    rows.push([t,'r3_px', E('r3_px').textContent || '']);
+
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `sized-conversion_${new Date().toISOString()}.csv`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 3000);
+  });
+
+  // 导出 PDF
+  E('exportPdf').addEventListener('click', ()=> {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({unit:'mm',format:'a4'});
+    let y = 14;
+    doc.setFontSize(14); doc.text('尺寸换算器 导出', 14, y); y+=8;
+    doc.setFontSize(10);
+    doc.text(`时间: ${new Date().toLocaleString()}`, 14, y); y+=8;
+    doc.text('区域1 单位', 14, y); y+=6;
+    ['mInput','cmInput','mmInput','inInput','ftInput'].forEach(id => { doc.text(`${id}: ${E(id).value || '—'}`, 14, y); y+=6; });
+    y+=4; doc.text('区域2', 14, y); y+=6;
+    doc.text(`Diag(in): ${E('diagInput').value || '—'}  Dot(mm): ${E('globalDot').value || '—'}`, 14, y); y+=6;
+    ['A','B','C','D'].forEach(k => {
+      doc.text(`${k} — ${E(`${k}_wh_in`).textContent || '—'}`, 14, y); y+=6;
+      doc.text(`  ${E(`${k}_wh_mm`).textContent || '—'}  ${E(`${k}_px`).textContent || '—'}`, 16, y); y+=6;
+    });
+    y+=4; doc.text('区域3', 14, y); y+=6;
+    doc.text(`W(mm): ${E('r3_w_mm').value || '—'}  H(mm): ${E('r3_h_mm').value || '—'}  Dot(mm): ${E('r3_dot').value || '—'}`, 14, y); y+=6;
+    doc.text(`Diag: ${E('r3_diag').textContent || '—'}  W(in): ${E('r3_w_in').textContent || '—'}  H(in): ${E('r3_h_in').textContent || '—'}`, 14, y); y+=6;
+    doc.text(`Aspect: ${E('r3_aspect').textContent || '—'}  Pixels: ${E('r3_px').textContent || '—'}`, 14, y);
+    doc.save(`sized-conversion_${new Date().toISOString()}.pdf`);
+  });
+
+  // 语言切换
+  const toggle = E('toggleLang');
+  toggle.addEventListener('click', ()=> {
+    if (toggle.textContent === 'EN') {
+      document.title = 'Size Converter'; document.querySelector('h1').textContent = 'Size Converter'; toggle.textContent = '中';
+    } else { document.title = '尺寸换算器'; document.querySelector('h1').textContent = '尺寸换算器'; toggle.textContent='EN'; }
+  });
+
+  // 初始化默认值
+  E('globalDot').value = '1.86';
+  E('r3_dot').value = '1.86';
+})();
+</script>
+</body>
+</html>
